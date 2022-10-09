@@ -1,10 +1,10 @@
+from unicodedata import category
 from pydantic import BaseModel
-from typing import Optional
 
 class Stats(BaseModel):
-    hp: int 
     attack: int 
     defense: int
+    hp: int 
     special_attack: int
     special_defense: int 
     speed: int
@@ -16,11 +16,16 @@ class Image(BaseModel):
     url: str
 
 class Pokemon(BaseModel):
+    abillities: str
+    category: str
+    gender: str
+    height: float
     id_pokedex: int
     name: str
-    type: str
     stats: Stats
+    type: str
     weaknesses: str
+    weight: float
 
     class Config:
         orm_mode = True

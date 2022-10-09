@@ -1,0 +1,59 @@
+[
+    {
+        "abillities": "Overgrow",
+        "category": "Seed",
+        "gender": "male, female",
+        "height": 0.7,
+        "id_pokedex": 1,
+        "name": "Bulbasaur",
+        "stats": {
+            "attack": 3,
+            "defense": 3,
+            "hp": 3,
+            "special_attack": 4,
+            "special_defense": 4,
+            "speed": 3
+        },
+        "type": "grass, poison",
+        "weaknesses": "fire, psychic. flying, ice",
+        "weight": 6.9
+    },
+    {
+        "abillities": "Overgrow",
+        "category": "Seed",
+        "gender": "male, female",
+        "height": 1.0,
+        "id_pokedex": 2,
+        "name": "Ivysaur",
+        "stats": {
+            "attack": 4,
+            "defense": 4,
+            "hp": 4,
+            "special_attack": 5,
+            "special_defense": 5,
+            "speed": 4
+        },
+        "type": "grass, poison",
+        "weaknesses": "fire, psychic. flying, ice",
+        "weight": 13.0
+    },
+    {
+        "abillities": "Overgrow",
+        "category": "Seed",
+        "gender": "male, female",
+        "height": 2.0,
+        "id_pokedex": 3,
+        "name": "Venusaur",
+        "stats": {
+            "attack": 5,
+            "defense": 5,
+            "hp": 5,
+            "special_attack": 6,
+            "special_defense": 6,
+            "speed": 5
+        },
+        "type": "grass, poison",
+        "weaknesses": "fire, psychic. flying, ice",
+        "weight": 100.0
+    }
+]
