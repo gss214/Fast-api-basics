@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from .. import schemas, database
+from ..utils import UUIDutils
 from ..repository import pokemon as pokemon_repository
 from ..repository import stats as stats_repository
 from sqlalchemy.orm import Session
@@ -18,20 +19,21 @@ def create_pokemon(pokemon: schemas.Pokemon, db: Session = Depends(database.get_
     return pokemon
 
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_pokemon(id:int, db: Session = Depends(database.get_db)):
-    if not pokemon_repository.delete_by_id(db,id):
+def delete_pokemon(id:str, db: Session = Depends(database.get_db)):
+    if not UUIDutils.isUUID(id) or not pokemon_repository.delete_by_id(db,id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon with the id {id} is not found')
     if not stats_repository.delete_by_pokemon_id(db, id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon_stats with the pokemon_id {id} is not found')
     return {'ok':True}
 
 @router.get('/{id}', status_code=status.HTTP_200_OK)
-def get_pokemon(id:int, db: Session = Depends(database.get_db)):
-    pokemon = pokemon_repository.get_by_id(db, id)
-    if not pokemon.first():
+def get_pokemon(id:str, db: Session = Depends(database.get_db)):
+    if not UUIDutils.isUUID(id): 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon with the id {id} is not found')
-    pokemon = pokemon.first()
-    pokemon_stats = stats_repository.get_by_pokemon_id(db, pokemon.id)
+    pokemon = pokemon_repository.get_by_id(db, id)
+    if not pokemon:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon with the id {id} is not found')
+    pokemon_stats = stats_repository.get_by_pokemon_id(db, str(pokemon.id))
     if not pokemon_stats.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon_stats with the id {id} is not found')
     pokemon.stats = [pokemon_stats.first()]

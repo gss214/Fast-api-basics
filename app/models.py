@@ -1,13 +1,14 @@
-import email
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
 from .database import Base
+from .utils import UUIDutils
+from sqlalchemy import Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+from sqlalchemy_utils import UUIDType
 
 class Stats(Base):
     __tablename__ = 'stats'
 
-    id = Column(Integer,primary_key=True,index=True)
-    pokemon_id = Column(Integer,ForeignKey('pokemon.id'))
+    id = Column(UUIDType(binary=False), primary_key=True, default=UUIDutils.genUUID4())
+    pokemon_id = Column(UUIDType(binary=False), ForeignKey('pokemon.id'))
     pokemon = relationship('Pokemon', back_populates='stats')
     attack = Column(Integer) 
     defense = Column(Integer)
@@ -19,7 +20,7 @@ class Stats(Base):
 class Pokemon(Base):
     __tablename__ = 'pokemon'
 
-    id = Column(Integer,primary_key=True,index=True)
+    id = Column(UUIDType(binary=False), primary_key=True, default=UUIDutils.genUUID4())
     id_pokedex = Column(Integer)
     abillities = Column(String)
     category = Column(String)
@@ -34,7 +35,7 @@ class Pokemon(Base):
 class User(Base):
     __tablename__ = 'user'
 
-    id = Column(Integer,primary_key=True,index=True)
+    id = Column(UUIDType(binary=False), primary_key=True, default=UUIDutils.genUUID4())
     name = Column(String)
     email = Column(String)
     password = Column(String)

@@ -10,13 +10,12 @@ def create(db: Session, pokemon: schemas.Pokemon):
     db.refresh(db_pokemon)
     return db_pokemon
 
-def get_by_id(db: Session, id:int):
-    return db.query(models.Pokemon).filter(models.Pokemon.id == id) 
+def get_by_id(db: Session, id:str):
+    return db.query(models.Pokemon).filter(models.Pokemon.id == id).first()
     
-def delete_by_id(db: Session, id:int):
+def delete_by_id(db: Session, id:str):
     pokemon = get_by_id(db, id)
-    if not pokemon.first():
+    if not pokemon:
         return False
-    pokemon.delete(synchronize_session=False)
-    db.commit()
+    db.delete(pokemon)
     return True
