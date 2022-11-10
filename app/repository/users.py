@@ -7,9 +7,8 @@ def create(db: Session, user: schemas.User):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)    
-    return user
+    return db_user
 
-def get_by_id(db: Session, id:int):
-    return db.query(models.User).filter(models.User.id == id)
+def get_by_id(db: Session, id:str):
+    return db.query(models.User).filter(models.User.id == id).first()
  
-    

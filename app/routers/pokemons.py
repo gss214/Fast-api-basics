@@ -10,12 +10,14 @@ router = APIRouter(
     tags=['Pokemons']
 )
 
-@router.post('/', status_code=status.HTTP_201_CREATED, response_model=schemas.Pokemon)
+@router.post('/', status_code=status.HTTP_201_CREATED, response_model=schemas.ShowPokemon)
 def create_pokemon(pokemon: schemas.Pokemon, db: Session = Depends(database.get_db)):
     db_pokemon = pokemon_repository.create(db, pokemon)
     stats_data = pokemon.dict().pop('stats', None)
     stats_data['pokemon_id'] = db_pokemon.id
     stats_repository.create(db, stats_data)
+    pokemon = pokemon.dict()
+    pokemon['id'] = db_pokemon.id
     return pokemon
 
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
@@ -34,7 +36,7 @@ def get_pokemon(id:str, db: Session = Depends(database.get_db)):
     if not pokemon:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon with the id {id} is not found')
     pokemon_stats = stats_repository.get_by_pokemon_id(db, str(pokemon.id))
-    if not pokemon_stats.first():
+    if not pokemon_stats:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon_stats with the id {id} is not found')
-    pokemon.stats = [pokemon_stats.first()]
+    pokemon.stats = [pokemon_stats]
     return pokemon

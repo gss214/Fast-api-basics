@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from uuid import UUID
 
 class Stats(BaseModel):
     attack: int 
@@ -29,12 +30,16 @@ class Pokemon(BaseModel):
     class Config:
         orm_mode = True
 
+class ShowPokemon(Pokemon):
+    id: UUID
+
 class User(BaseModel):
     name: str
     email: str
     password: str
     
 class ShowUser(BaseModel):
+    id: UUID
     name: str
     email: str
 
