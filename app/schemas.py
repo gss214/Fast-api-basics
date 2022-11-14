@@ -12,9 +12,6 @@ class Stats(BaseModel):
     class Config:
         orm_mode = True
 
-class Image(BaseModel):
-    url: str
-
 class Pokemon(BaseModel):
     abillities: str
     category: str
@@ -27,7 +24,7 @@ class Pokemon(BaseModel):
     weaknesses: str
     weight: float
 
-    class Config:
+    class Config():
         orm_mode = True
 
 class ShowPokemon(Pokemon):
@@ -43,5 +40,16 @@ class ShowUser(BaseModel):
     name: str
     email: str
 
-    class Config:
+    class Config():
         orm_mode = True 
+
+class Login(BaseModel):
+    useremail: str 
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    useremail: str | None = None

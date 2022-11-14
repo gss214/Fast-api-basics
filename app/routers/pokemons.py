@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from .. import schemas, database
+from .. import schemas, database, oauth2
 from ..utils import UUIDutils
 from ..repository import pokemon as pokemon_repository
 from ..repository import stats as stats_repository
@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 @router.post('/', status_code=status.HTTP_201_CREATED, response_model=schemas.ShowPokemon)
-def create_pokemon(pokemon: schemas.Pokemon, db: Session = Depends(database.get_db)):
+def create_pokemon(pokemon: schemas.Pokemon, db: Session = Depends(database.get_db), get_current_user: schemas.User = Depends(oauth2.get_current_user)):
     db_pokemon = pokemon_repository.create(db, pokemon)
     stats_data = pokemon.dict().pop('stats', None)
     stats_data['pokemon_id'] = db_pokemon.id
@@ -21,7 +21,7 @@ def create_pokemon(pokemon: schemas.Pokemon, db: Session = Depends(database.get_
     return pokemon
 
 @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_pokemon(id:str, db: Session = Depends(database.get_db)):
+def delete_pokemon(id:str, db: Session = Depends(database.get_db), get_current_user: schemas.User = Depends(oauth2.get_current_user)):
     if not UUIDutils.isUUID(id) or not pokemon_repository.delete_by_id(db,id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'pokemon with the id {id} is not found')
     if not stats_repository.delete_by_pokemon_id(db, id):
