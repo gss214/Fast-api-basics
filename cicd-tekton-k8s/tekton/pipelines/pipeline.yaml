@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: fastapi-deploy-pipeline
+spec:
+  workspaces:
+    - name: workspace
+      description: "Workspace para o contexto de build e a imagem exportada"
+  tasks:
+    - name: build-and-load-docker-image
+      taskRef:
+        name: build-and-load-docker-image
+      workspaces:
+        - name: workspace
+          workspace: workspace

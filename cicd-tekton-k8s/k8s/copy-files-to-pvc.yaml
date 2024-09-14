@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: copy-files-to-pvc
+spec:
+  containers:
+    - name: alpine
+      image: alpine
+      command: ["/bin/sh", "-c", "sleep 3600"]
+      volumeMounts:
+        - mountPath: /mnt/workspace
+          name: source-pvc
+  volumes:
+    - name: source-pvc
+      persistentVolumeClaim:
+        claimName: source-pvc
+  restartPolicy: Never

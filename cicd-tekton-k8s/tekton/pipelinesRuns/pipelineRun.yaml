@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: fastapi-deploy-pipelinerun
+spec:
+  pipelineRef:
+    name: fastapi-deploy-pipeline
+  workspaces:
+    - name: workspace
+      persistentVolumeClaim:
+        claimName: source-pvc

@@ -1,0 +1,19 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-and-load-docker-image
+spec:
+  workspaces:
+    - name: workspace
+      description: "Workspace para o contexto de build do Docker"
+  steps:
+    - name: build-and-load-docker-image
+      image: docker:23.0.0-dind
+      securityContext:
+        privileged: true
+      script: |
+        cd workspace/workspace
+        dockerd-entrypoint.sh &
+        sleep 10
+        docker build -t fastapi:local .
+        docker save fastapi:local -o fastapi.tar
