@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CLUSTER_NAME="my-simple-cluster"
-CLUSTER_CONFIG="cicd-tekton-k8s/kind/simple-cluster.yaml"
+CLUSTER_CONFIG="cicd/kind/simple-cluster.yaml"
 
 # Verifica se o arquivo de configuração do cluster existe
 if [ ! -f "$CLUSTER_CONFIG" ]; then
@@ -36,10 +36,10 @@ if [ $? -ne 0 ]; then
 fi
 echo "Tekton Dashboard instalado com sucesso."
 
-echo "Aplicando recursos do Kubernetes..."
-kubectl apply -f cicd-tekton-k8s/k8s/pvc.yaml
-sleep 5
-kubectl apply -f cicd-tekton-k8s/k8s/copy-files-to-pvc.yaml
+echo "Aplicando recursos do Kubernetes (PVC + pod auxiliar)..."
+kubectl apply -f cicd/k8s/pvc.yaml
+sleep 3
+kubectl apply -f cicd/k8s/copy-files-to-pvc.yaml
 
 # Espera até que o pod 'copy-files-to-pvc' esteja pronto
 echo "Aguardando o pod 'copy-files-to-pvc' ficar pronto..."
@@ -61,11 +61,11 @@ fi
 
 sleep 10
 echo "Aplicando tasks e pipelines do Tekton..."
-kubectl apply -f cicd-tekton-k8s/tekton/tasks/
+kubectl apply -f cicd/tekton/tasks/
 sleep 1
-kubectl apply -f cicd-tekton-k8s/tekton/pipelines/
+kubectl apply -f cicd/tekton/pipelines/
 sleep 1
-kubectl apply -f cicd-tekton-k8s/tekton/pipelinesRuns/
+# PipelinesRuns agora são criadas dinamicamente pelo script cicd/deploy.sh
 
 echo "Aguardando execução da PipelineRun..."
 kubectl wait --for=condition=Succeeded pipelinerun/fastapi-deploy-pipelinerun --timeout=300s
@@ -80,21 +80,6 @@ else
 fi
 
 echo "Buildando a imagem..."
-docker build -t fastapi:local .
-
-echo "Carregando a imagem no cluster Kind..."
-kind load docker-image fastapi:local --name $CLUSTER_NAME
-if [ $? -ne 0 ]; then
-  echo "Erro: Falha ao carregar a imagem no cluster Kind."
-  exit 1
-fi
-
-echo "Aplicando o deployment da aplicação..."
-kubectl apply -f cicd-tekton-k8s/k8s/deployment.yaml
-if [ $? -ne 0 ]; then
-  echo "Erro: Falha ao aplicar o deployment."
-  exit 1
-fi
-
-echo "Deployment concluído com sucesso. Verificando status dos pods..."
-kubectl get pods
+echo "Script legado finalizado. Use agora:"
+echo "  ./cicd/infra.sh  (uma vez)"
+echo "  ./cicd/deploy.sh (para cada iteração)"

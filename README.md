@@ -1,87 +1,181 @@
 
-# Fast API Basics with Pokemons
+## FastAPI Basics (Pokémon themed) + Local Tekton/Kind CI
 
-## Description
+This repository contains a small FastAPI application (Pokémon themed) and a minimal local CI iteration workflow powered by:
+* Kind (local Kubernetes cluster)
+* Tekton Pipelines + Tekton Dashboard (version pinned for reproducibility)
+* A PVC + helper pod to share source code and retrieve the built image tar
 
-This project is just to learn the basics of FastAPI by creating an API themed around Pokémon. It's a fun way to get started with FastAPI, and now it's also been enhanced with a CI/CD pipeline using Tekton and Kind for automated builds and deployments.
+The goal is fast local feedback: change code → run `./cicd/deploy.sh` → new container image is built inside the cluster → image is loaded into Kind → Deployment updated.
 
-## Setup Development Environment with Devbox
+---
 
-For a streamlined development environment, consider using [Devbox](https://www.jetify.com/devbox). Devbox provides a powerful, isolated development environment with tools and dependencies ready to go.
+## Table of Contents
+1. Prerequisites
+2. Quick Start
+3. Development (run locally without Kubernetes)
+4. Local CI Loop (infra + deploy)
+5. Environment Variables (`deploy.sh`)
+6. How the Tekton Pipeline Works
+7. Accessing the App
 
-### Installation
+---
 
-Follow the installation guide on [Devbox's official website](https://www.jetify.com/devbox) to set up Devbox on your machine. This will help you manage your development environment efficiently, especially when working with multiple dependencies or projects.
+## 1. Prerequisites
 
-Once Devbox is set up, you can quickly configure your environment by running:
+Install (or ensure you have):
+* Docker (for Kind + optional docker load)
+* kind
+* kubectl
+* bash / coreutils
+* (Optional) Devbox – for reproducible dev environment
 
+Check versions (optional):
+```bash
+docker --version
+kind --version
+kubectl version --client --output=yaml
+```
+
+## 2. Quick Start
+
+Provision infrastructure (cluster + Tekton + PVC + pipeline + helper pod):
+```bash
+./cicd/infra.sh
+```
+
+Deploy (build image and update deployment):
+```bash
+./cicd/deploy.sh
+```
+
+Port-forward to test:
+```bash
+kubectl port-forward deployment/fastapi-deployment 5000:5000
+# Then open http://localhost:5000/docs
+```
+
+Iterate (edit code) and rerun:
+```bash
+./cicd/deploy.sh
+```
+
+## 3. Development Without Kubernetes
+
+Install dependencies and run with uvicorn directly:
+```bash
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
+```
+Visit: http://localhost:8000/docs (or whichever port uvicorn prints).
+
+## 4. Local CI Loop (Two Scripts)
+
+### `cicd/infra.sh` (idempotent)
+Does one‑time or occasional setup:
+* Creates Kind cluster if missing (name: `my-simple-cluster` by default)
+* Installs Tekton Pipelines + Dashboard (pinned versions)
+* Creates PVC `source-pvc`
+* Creates helper pod `copy-files-to-pvc` (used to sync source + extract image.tar)
+* Applies Tekton Task + Pipeline definitions
+
+Re-run `./infra.sh` safely if something seems out of sync.
+
+### `cicd/deploy.sh` (fast iteration)
+Steps:
+1. Copies local source (`app/`, `Dockerfile`, `requirements.txt`) into the PVC via helper pod
+2. Creates a new `PipelineRun` with an image tag (default: timestamp)
+3. Tekton Task builds the image (Docker-in-Docker) and saves `image.tar` in the workspace
+4. Script copies `image.tar` back to host and loads it into Kind
+5. Script patches the Kubernetes Deployment to use `IMAGE_NAME:IMAGE_TAG`
+
+Result: New pods start with the fresh image.
+
+## 5. Environment Variables (`deploy.sh`)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `IMAGE_NAME` | `fastapi` | Logical image name (no registry prefix) |
+| `IMAGE_TAG` | current timestamp | Custom tag for reproducibility / uniqueness |
+| `WORKSPACE_PVC` | `source-pvc` | PVC used as Tekton workspace |
+| `CLUSTER_NAME` | `my-simple-cluster` | Kind cluster name (matches infra) |
+| `LOAD_TO_KIND` | `true` | If `false`, skip loading the tar into cluster (no effect then) |
+| `APPLY_DEPLOYMENT` | `true` | If `false`, skip updating the deployment image |
+| `DEPLOYMENT_FILE` | `cicd/k8s/deployment.yaml` | Deployment manifest path |
+| `CONTAINER_NAME` | (auto-detect) | Explicit container name inside deployment if needed |
+
+Examples:
+```bash
+IMAGE_TAG=dev ./cicd/deploy.sh
+IMAGE_NAME=fastapi IMAGE_TAG=feature-x ./cicd/deploy.sh
+APPLY_DEPLOYMENT=false ./cicd/deploy.sh   # just build & load image
+LOAD_TO_KIND=false ./cicd/deploy.sh       # skip loading into kind
+```
+
+Use a git short SHA:
+```bash
+IMAGE_TAG=$(git rev-parse --short HEAD) ./cicd/deploy.sh
+```
+
+## 6. How the Tekton Pipeline Works
+
+Definitions (see `cicd/tekton/`):
+* Task: `build-and-load-docker-image`
+  * Image: `docker:23.0.0-dind` (Docker-in-Docker, privileged)
+  * Builds: `docker build -t ${imageName}:${imageTag} .`
+  * Saves: `docker save ${imageName}:${imageTag} -o image.tar`
+* Pipeline: passes `imageName` + `imageTag` params to the Task
+* Workspace: Mounted PVC. Inside the Task container Tekton mounts it at `/workspace/workspace/`. The `image.tar` ends up at the root of that workspace volume, which corresponds to `/mnt/workspace/image.tar` inside the helper pod.
+
+The `cicd/deploy.sh` script copies that tar out via:
+```
+kubectl cp copy-files-to-pvc:/mnt/workspace/image.tar image.tar
+```
+Then loads into Kind:
+```
+kind load image-archive image.tar --name <cluster>
+```
+
+## 7. Accessing the App
+
+Check pods:
+```bash
+kubectl get pods
+```
+
+Port-forward (example):
+```bash
+kubectl port-forward deployment/fastapi-deployment 5000:5000
+```
+Visit: http://localhost:5000/docs
+
+Confirm deployment image:
+```bash
+kubectl get deployment fastapi-deployment -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
+```
+
+---
+
+## Devbox (Optional)
+
+You can still use Devbox for an isolated environment:
 ```bash
 devbox shell
 ```
+Then run local FastAPI or the scripts as usual.
 
-This will ensure that all necessary tools and dependencies are available for development.
+---
 
-## Run
+## License
 
-To run the project install the required libraries listed in `requirements.txt`:
+Educational / personal learning project. Use freely.
 
-```bash
-pip install -r requirements.txt
-```
+---
 
-Then, start the application with the following command:
-
-```bash
-python3 -m uvicorn app.main:app --reload
-```
-
-## Endpoints
-
-To explore the application endpoints, visit the `/docs` page after starting the server. This page provides an interactive interface for testing the API.
-
-## CI/CD Pipeline with Tekton and Kind
-
-### Overview
-
-This project includes a CI/CD pipeline set up using Tekton and Kind to automate the build and deployment of the FastAPI application. The entire CI/CD flow is contained in the `cicd.sh` script, which automates each step of the pipeline from setting up the cluster to deploying the application.
-
-### CI/CD Flow:
-
-1. **Setup Kind Cluster:**
-   - The script starts by setting up a Kubernetes cluster locally using Kind (Kubernetes IN Docker). This allows for easy local testing and development without the need for cloud resources.
-   - The cluster is configured using a YAML file (`simple-cluster.yaml`) which defines the nodes and networking for the cluster.
-
-2. **Install Tekton Pipelines and Dashboard:**
-   - Tekton Pipelines is installed to manage CI/CD tasks and pipelines within the Kubernetes cluster. Tekton Dashboard is also installed to provide a UI for monitoring the pipeline runs and their statuses.
-
-   - You can monitor the PipelineRun by accessing the Tekton Dashboard. To do this, start by running the following command to set up a proxy: `kubectl proxy`. Then, access the Tekton Dashboard at: `http://localhost:8001/api/v1/namespaces/tekton-pipelines/services/tekton-dashboard:http/proxy`
-   This will open the Tekton Dashboard where you can see detailed views of your PipelineRuns, including logs and execution statuses. Refer to the image below for an example of what the Tekton Dashboard looks like:
-
-   ![alt text](/imgs/tekton-dash.png)
-
-3. **Build Docker Image:**
-   - A Tekton Task is configured to build the Docker image of the FastAPI application using Docker-in-Docker (DinD). This task encapsulates the build process within the CI/CD pipeline, ensuring consistency across builds.
-
-4. **Load Docker Image into Kind:**
-   - After the image is built, the script uses `kind load docker-image` to load the image into the Kind cluster, making it accessible for the application deployment.
-
-5. **Deploy the Application:**
-   - The FastAPI application is deployed to the cluster using a Kubernetes Deployment YAML file. This deployment defines the number of replicas, the container image to use, and other deployment configurations.
-   - A Service is also created to expose the FastAPI application, making it accessible externally for testing and use.
-
-6. **PipelineRun Automation:**
-   - The `cicd.sh` script automates the entire process by executing the Tekton Pipeline, which handles building the image and deploying the application seamlessly.
-   - In a production setup, the pipeline would also push the Docker image to a container registry (like Docker Hub or a private registry) and manage deployments using those images.
-
-After deploying the application, you can access it by using the kubectl port-forward command to redirect traffic from the pod's port to your local machine. Run the following command:
-
-```bash
-kubectl port-forward <pod-name> 5000:5000
-```
-
-Replace `<pod-name>` with the name of the pod where application is running. This will forward port 5000 from the pod to port 5000 on your local machine, allowing you to access the application at http://localhost:5000.
-
-### Challenges and Local Adjustments
-
-- The pipeline was designed to work entirely locally for development purposes, using Kind and Tekton to simulate a production-like CI/CD environment.
-- In a production environment, the pipeline would push the Docker image to a container registry and manage deployments directly from there.
+### Zero-to-Running (Quick Recap)
+1. Clone repo
+2. (Optional) Activate devbox or virtualenv
+3. `./cicd/infra.sh`
+4. `./cicd/deploy.sh`
+5. `kubectl port-forward deployment/fastapi-deployment 5000:5000`
+6. Open http://localhost:5000/docs

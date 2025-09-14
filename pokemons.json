@@ -55,5 +55,138 @@
         "type": "grass, poison",
         "weaknesses": "fire, psychic. flying, ice",
         "weight": 100.0
+    },
+    {
+        "abillities": "Blaze",
+        "category": "Lizard",
+        "gender": "male, female",
+        "height": 0.6,
+        "id_pokedex": 4,
+        "name": "Charmander",
+        "stats": {
+            "attack": 4,
+            "defense": 3,
+            "hp": 3,
+            "special_attack": 5,
+            "special_defense": 4,
+            "speed": 5
+        },
+        "type": "fire",
+        "weaknesses": "water, ground, rock",
+        "weight": 8.5
+    },
+    {
+        "abillities": "Blaze",
+        "category": "Flame",
+        "gender": "male, female",
+        "height": 1.1,
+        "id_pokedex": 5,
+        "name": "Charmeleon",
+        "stats": {
+            "attack": 5,
+            "defense": 4,
+            "hp": 4,
+            "special_attack": 6,
+            "special_defense": 5,
+            "speed": 6
+        },
+        "type": "fire",
+        "weaknesses": "water, ground, rock",
+        "weight": 19.0
+    },
+    {
+        "abillities": "Blaze",
+        "category": "Flame",
+        "gender": "male, female",
+        "height": 1.7,
+        "id_pokedex": 6,
+        "name": "Charizard",
+        "stats": {
+            "attack": 6,
+            "defense": 5,
+            "hp": 5,
+            "special_attack": 7,
+            "special_defense": 6,
+            "speed": 7
+        },
+        "type": "fire, flying",
+        "weaknesses": "water, electric, rock",
+        "weight": 90.5
+    },
+    {
+        "abillities": "Torrent",
+        "category": "Tiny Turtle",
+        "gender": "male, female",
+        "height": 0.5,
+        "id_pokedex": 7,
+        "name": "Squirtle",
+        "stats": {
+            "attack": 3,
+            "defense": 4,
+            "hp": 3,
+            "special_attack": 4,
+            "special_defense": 4,
+            "speed": 3
+        },
+        "type": "water",
+        "weaknesses": "electric, grass",
+        "weight": 9.0
+    },
+    {
+        "abillities": "Torrent",
+        "category": "Turtle",
+        "gender": "male, female",
+        "height": 1.0,
+        "id_pokedex": 8,
+        "name": "Wartortle",
+        "stats": {
+            "attack": 4,
+            "defense": 5,
+            "hp": 4,
+            "special_attack": 5,
+            "special_defense": 5,
+            "speed": 4
+        },
+        "type": "water",
+        "weaknesses": "electric, grass",
+        "weight": 22.5
+    },
+    {
+        "abillities": "Torrent",
+        "category": "Shellfish",
+        "gender": "male, female",
+        "height": 1.6,
+        "id_pokedex": 9,
+        "name": "Blastoise",
+        "stats": {
+            "attack": 5,
+            "defense": 6,
+            "hp": 5,
+            "special_attack": 6,
+            "special_defense": 6,
+            "speed": 5
+        },
+        "type": "water",
+        "weaknesses": "electric, grass",
+        "weight": 85.5
+    },
+    {
+        "abillities": "Shield Dust",
+        "category": "Worm",
+        "gender": "male, female",
+        "height": 0.3,
+        "id_pokedex": 10,
+        "name": "Caterpie",
+        "stats": {
+            "attack": 2,
+            "defense": 2,
+            "hp": 3,
+            "special_attack": 1,
+            "special_defense": 1,
+            "speed": 3
+        },
+        "type": "bug",
+        "weaknesses": "fire, flying, rock",
+        "weight": 2.9
     }
 ]
