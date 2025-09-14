@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-and-load-docker-image
+spec:
+  params:
+    - name: imageName
+      type: string
+      description: Nome da imagem (repositório)
+      default: fastapi
+    - name: imageTag
+      type: string
+      description: Tag da imagem
+      default: local
+  workspaces:
+    - name: workspace
+      description: "Workspace para o contexto de build do Docker"
+  steps:
+    - name: build-and-load-docker-image
+      image: docker:23.0.0-dind
+      securityContext:
+        privileged: true
+      script: |
+        set -euo pipefail
+        cd workspace/workspace
+        dockerd-entrypoint.sh > /var/log/dockerd.log 2>&1 &
+        echo "Aguardando Docker daemon..."
+        for i in $(seq 1 30); do
+          if docker info >/dev/null 2>&1; then
+            echo "Docker daemon pronto"; break; fi
+          sleep 1
+          if [ $i -eq 30 ]; then echo "Docker daemon não iniciou"; exit 1; fi
+        done
+        IMAGE="$(params.imageName):$(params.imageTag)"
+        echo "Construindo imagem $IMAGE"
+        docker build -t "$IMAGE" .
+        docker save "$IMAGE" -o image.tar
+        echo "Imagem $IMAGE salva em image.tar"

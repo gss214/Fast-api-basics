@@ -3,6 +3,15 @@ kind: Pipeline
 metadata:
   name: fastapi-deploy-pipeline
 spec:
+  params:
+    - name: imageName
+      type: string
+      description: Nome da imagem
+      default: fastapi
+    - name: imageTag
+      type: string
+      description: Tag da imagem
+      default: local
   workspaces:
     - name: workspace
       description: "Workspace para o contexto de build e a imagem exportada"
@@ -13,3 +22,8 @@ spec:
       workspaces:
         - name: workspace
           workspace: workspace
+      params:
+        - name: imageName
+          value: $(params.imageName)
+        - name: imageTag
+          value: $(params.imageTag)
