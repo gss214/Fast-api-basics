@@ -11,6 +11,7 @@ CLUSTER_NAME="${CLUSTER_NAME:-my-simple-cluster}"
 LOAD_TO_KIND="${LOAD_TO_KIND:-true}"
 APPLY_DEPLOYMENT="${APPLY_DEPLOYMENT:-true}"
 DEPLOYMENT_FILE="${DEPLOYMENT_FILE:-cicd/k8s/deployment.yaml}"
+ROLLOUT_FILE="${ROLLOUT_FILE:-cicd/k8s/rollout.yaml}"
 CONTAINER_NAME="${CONTAINER_NAME:-}"
 
 YELLOW="\033[33m"; GREEN="\033[32m"; RED="\033[31m"; CYAN="\033[36m"; RESET="\033[0m"
@@ -32,6 +33,9 @@ checar_dep(){
   for bin in kubectl; do
     command -v "$bin" >/dev/null 2>&1 || die "Dependência '$bin' ausente"
   done
+  if [[ "${LOAD_TO_KIND}" == "true" ]]; then
+    command -v kind >/dev/null 2>&1 || die "Dependência 'kind' ausente para LOAD_TO_KIND=true"
+  fi
 }
 
 copiar_codigo_para_pvc(){
@@ -113,25 +117,57 @@ extrair_imagem_do_pvc(){
   ok "Imagem carregada no Kind"
 }
 
-atualizar_deployment(){
-  [[ "$APPLY_DEPLOYMENT" == "true" ]] || { warn "APPLY_DEPLOYMENT=false; pulando deployment"; return; }
-  [[ -f "$DEPLOYMENT_FILE" ]] || die "Deployment file não encontrado: $DEPLOYMENT_FILE"
+atualizar_deployment_ou_rollout(){
+  [[ "$APPLY_DEPLOYMENT" == "true" ]] || { warn "APPLY_DEPLOYMENT=false; pulando atualização"; return; }
   local full_ref="${IMAGE_NAME}:${IMAGE_TAG}"
-  log "Atualizando deployment com nova imagem $full_ref"
-  kubectl apply -f "$DEPLOYMENT_FILE"
   local target_container="$CONTAINER_NAME"
-  if [ -z "$target_container" ]; then
-    target_container=$(kubectl get deployment fastapi-deployment -o jsonpath='{.spec.template.spec.containers[0].name}' 2>/dev/null || echo "")
+  local ns_flag=""
+  if [[ -n "${NAMESPACE:-}" ]]; then
+    ns_flag="-n $NAMESPACE"
+  fi
+  # Preferir rollout se recurso existir
+  if kubectl get rollout fastapi-rollout $ns_flag >/dev/null 2>&1; then
     if [ -z "$target_container" ]; then
-      warn "Não foi possível detectar nome do container; usando 'fastapi' como fallback"
-      target_container="fastapi"
+      target_container=$(kubectl get rollout fastapi-rollout $ns_flag -o jsonpath='{.spec.template.spec.containers[0].name}' 2>/dev/null || echo "fastapi")
     fi
+    log "Atualizando Rollout fastapi-rollout container '$target_container' para $full_ref"
+    if command -v kubectl-argo-rollouts >/dev/null 2>&1; then
+      kubectl argo rollouts set image fastapi-rollout "${target_container}=${full_ref}" $ns_flag || die "Falha set image via plugin"
+    else
+      # Fallback patch strategy spec.template
+      kubectl $ns_flag patch rollout fastapi-rollout \
+        --type='merge' \
+        -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"$target_container\",\"image\":\"$full_ref\"}]}}}}" || die "Falha patch rollout"
+    fi
+    log "Aguardando steps do canary (Rollout)"
+    kubectl argo rollouts get rollout fastapi-rollout $ns_flag 2>/dev/null || true
+    # Espera até alcançar 100% (Weight 100) ou timeout
+    local deadline=$(( $(date +%s) + 600 ))
+    while true; do
+      local phase
+      phase=$(kubectl get rollout fastapi-rollout $ns_flag -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+      if [[ "$phase" == "Healthy" ]]; then
+        ok "Rollout Healthy"
+        break
+      fi
+      if (( $(date +%s) > deadline )); then
+        warn "Timeout aguardando Rollout Healthy"
+        break
+      fi
+      sleep 5
+    done
+    return 0
   fi
-  log "Atualizando imagem do container '$target_container' para $full_ref"
-  if ! kubectl set image deployment/fastapi-deployment "${target_container}=${full_ref}" --record; then
-    warn "Falha ao atualizar imagem (container $target_container). Verifique nome do container e deployment"
+  # Caso não haja rollout, usar deployment padrão
+  [[ -f "$DEPLOYMENT_FILE" ]] || die "Deployment file não encontrado: $DEPLOYMENT_FILE"
+  log "Aplicando Deployment ($DEPLOYMENT_FILE)"
+  kubectl apply -f "$DEPLOYMENT_FILE"
+  if [ -z "$target_container" ]; then
+    target_container=$(kubectl get deployment fastapi-deployment -o jsonpath='{.spec.template.spec.containers[0].name}' 2>/dev/null || echo "fastapi")
   fi
-  kubectl rollout status deployment/fastapi-deployment --timeout=180s || warn "Rollout não confirmou em 180s"
+  log "Atualizando imagem do Deployment container '$target_container' para $full_ref"
+  kubectl set image deployment/fastapi-deployment "${target_container}=${full_ref}" --record || warn "Falha set image deployment"
+  kubectl rollout status deployment/fastapi-deployment --timeout=180s || warn "Rollout deployment não confirmou"
   ok "Deployment atualizado"
 }
 
@@ -141,7 +177,7 @@ main(){
   criar_pipelinerun
   aguardar_pipelinerun
   extrair_imagem_do_pvc
-  atualizar_deployment
+  atualizar_deployment_ou_rollout
   log "Deploy concluído (imagem ${IMAGE_NAME}:${IMAGE_TAG})"
 }
 
